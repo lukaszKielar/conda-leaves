@@ -1,0 +1,6 @@
+{
+  "name": "pkg2b",
+  "version": "0.0.1",
+  "channel": "conda-forge",
+  "depends": []
+}

@@ -1,0 +1,6 @@
+{
+  "name": "pkg1",
+  "version": "0.0.1",
+  "channel": "conda-forge",
+  "depends": []
+}

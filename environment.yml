@@ -1,0 +1,3 @@
+name: conda-tree
+dependencies:
+  - pylint
