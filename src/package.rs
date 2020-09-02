@@ -60,7 +60,7 @@ impl From<Metadata> for Package {
             .map(|name| Metadata::from_name(name.to_string()).unwrap())
             .map(|m| Package::from(m))
             .collect();
-
+        // TODO add required by
         Package {
             name: metadata.name,
             version: metadata.version,
