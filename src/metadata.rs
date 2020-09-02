@@ -66,8 +66,8 @@ impl Metadata {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
 
-        let p = serde_json::from_reader(reader)?;
-        Ok(p)
+        let m = serde_json::from_reader(reader)?;
+        Ok(m)
     }
 
     // TODO for now it supports only conda environments where all packages were installed by conda
