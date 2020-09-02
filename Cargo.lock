@@ -38,7 +38,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "conda-leafs"
+name = "conda-leaves"
 version = "0.0.1"
 dependencies = [
  "colored",
