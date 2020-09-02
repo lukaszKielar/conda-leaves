@@ -279,10 +279,11 @@ mod tests {
     #[test]
     fn test_from_name() {
         // given:
-        let expected_name = String::from("pip");
-        let expected_requires_dist = vec!["setuptools".to_string(), "wheel".to_string()];
+        std::env::set_var("CONDA_PREFIX", "./tests/data");
+        let expected_name = String::from("pkg3");
+        let expected_requires_dist = vec!["pkg2a".to_string(), "pkg2b".to_string()];
         // when:
-        let m = Metadata::from_name("pip".to_string()).unwrap();
+        let m = Metadata::from_name("pkg3".to_string()).unwrap();
         // then:
         assert_eq!(m.name, expected_name);
         assert_eq!(m.requires_dist, expected_requires_dist)
@@ -290,6 +291,8 @@ mod tests {
 
     #[test]
     fn test_from_name_unknown_package() {
+        // given:  
+        std::env::set_var("CONDA_PREFIX", "./tests/data");
         // when:
         let m = Metadata::from_name("unknown".to_string());
         // then:
