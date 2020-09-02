@@ -76,23 +76,23 @@ pub fn get_dependent_packages(name: String) -> Vec<String> {
 pub fn get_leaves() -> Vec<String> {
     let conda_metadata = get_conda_metadata();
 
-    let mut main_dependencies: Vec<String> = vec![];
+    let mut leaves: Vec<String> = vec![];
 
     for (name, m) in conda_metadata.iter() {
         // 0 dependent packages means that the package it the leaf
         if get_dependent_packages(name.to_string()).len() == 0 {
             // add name of the package to main dependencies
-            main_dependencies.push(name.to_string());
-            // and also it's dependencies
-            main_dependencies.extend(m.requires_dist.clone())
+            leaves.push(name.to_string());
+            // and also its dependencies
+            leaves.extend(m.requires_dist.clone())
         }
     }
     // sort vector
-    main_dependencies.sort();
+    leaves.sort();
     // remove duplicated values
-    main_dependencies.dedup();
+    leaves.dedup();
     // and return them
-    main_dependencies
+    leaves
 }
 
 #[cfg(test)]
