@@ -53,6 +53,9 @@ pub fn get_conda_metadata() -> HashMap<String, Metadata> {
     conda_metadata
 }
 
+// TODO this function should take a conda_metadata as an argument
+//  it will be much more flexible
+// TODO this function should take a reference to a name
 pub fn get_dependent_packages(name: String) -> Vec<String> {
     let conda_metadata = get_conda_metadata();
 
@@ -68,6 +71,28 @@ pub fn get_dependent_packages(name: String) -> Vec<String> {
         .filter(|n| !n.starts_with("python"))
         .collect();
     dependent_packages
+}
+
+pub fn get_leaves() -> Vec<String> {
+    let conda_metadata = get_conda_metadata();
+
+    let mut main_dependencies: Vec<String> = vec![];
+
+    for (name, m) in conda_metadata.iter() {
+        // 0 dependent packages means that the package it the leaf
+        if get_dependent_packages(name.to_string()).len() == 0 {
+            // add name of the package to main dependencies
+            main_dependencies.push(name.to_string());
+            // and also it's dependencies
+            main_dependencies.extend(m.requires_dist.clone())
+        }
+    }
+    // sort vector
+    main_dependencies.sort();
+    // remove duplicated values
+    main_dependencies.dedup();
+    // and return them
+    main_dependencies
 }
 
 #[cfg(test)]
@@ -150,7 +175,7 @@ mod tests {
             Metadata::new(
                 "pkg2c".to_string(),
                 "0.0.1".to_string(),
-                vec!["pkg1".to_string()],
+                vec!["pkg2a".to_string()],
             ),
         );
         expected_conda_metadata.insert(
@@ -184,7 +209,7 @@ mod tests {
         std::env::set_var("CONDA_PREFIX", "./tests/data");
         let expected_dependent_packages: Vec<String> = vec!["pkg3".to_string()];
         // when:
-        let dependent_packages = get_dependent_packages("pkg2a".to_string());
+        let dependent_packages = get_dependent_packages("pkg2b".to_string());
         // then:
         assert_eq!(dependent_packages, expected_dependent_packages)
     }
@@ -194,12 +219,29 @@ mod tests {
         // given:
         std::env::set_var("CONDA_PREFIX", "./tests/data");
         let mut expected_dependent_packages: Vec<String> =
-            vec!["pkg2a".to_string(), "pkg2c".to_string()];
+            vec!["pkg3".to_string(), "pkg2c".to_string()];
         expected_dependent_packages.sort();
         // when:
-        let mut dependent_packages = get_dependent_packages("pkg1".to_string());
+        let mut dependent_packages = get_dependent_packages("pkg2a".to_string());
         dependent_packages.sort();
         // then:
         assert_eq!(dependent_packages, expected_dependent_packages)
+    }
+
+    #[test]
+    fn test_get_leaves() {
+        // given:
+        std::env::set_var("CONDA_PREFIX", "./tests/data");
+        let mut expected_leaves: Vec<String> = vec![
+            "pkg2a".to_string(),
+            "pkg2b".to_string(),
+            "pkg2c".to_string(),
+            "pkg3".to_string(),
+        ];
+        expected_leaves.sort();
+        // when:
+        let leaves = get_leaves();
+        // then:
+        assert_eq!(leaves, expected_leaves)
     }
 }
