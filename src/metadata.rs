@@ -89,7 +89,6 @@ impl Metadata {
     }
 }
 
-// TODO I need to ignore `python` dependency
 fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
     D: Deserializer<'de>,
