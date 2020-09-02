@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use glob::glob;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -38,23 +37,6 @@ pub fn get_conda_meta_path() -> PathBuf {
     conda_meta
 }
 
-pub fn get_site_packages_path() -> PathBuf {
-    let conda_prefix = get_conda_prefix();
-    let mut site_packages = String::new();
-
-    for entry in glob(&conda_prefix).unwrap() {
-        match entry {
-            Ok(path) => {
-                site_packages.push_str(path.to_str().unwrap());
-                break;
-            }
-            _ => (),
-        }
-    }
-
-    Path::new(&site_packages).into()
-}
-
 pub fn get_conda_metadata() -> HashMap<String, Metadata> {
     let conda_meta = get_conda_meta_path();
 
@@ -69,6 +51,23 @@ pub fn get_conda_metadata() -> HashMap<String, Metadata> {
         }
     }
     conda_metadata
+}
+
+pub fn get_dependent_packages(name: String) -> Vec<String> {
+    let conda_metadata = get_conda_metadata();
+
+    match conda_metadata.get(&name) {
+        Some(_) => (),
+        None => panic!("Package '{}' not installed", name),
+    }
+
+    let dependent_packages: Vec<String> = conda_metadata
+        .values()
+        .filter(|m| m.requires_dist.contains(&name))
+        .map(|m| m.name.clone())
+        .filter(|n| !n.starts_with("python"))
+        .collect();
+    dependent_packages
 }
 
 #[cfg(test)]
@@ -101,5 +100,106 @@ mod tests {
         let text = "version".to_string();
         let output = extract_version(text);
         assert_eq!(output, None);
+    }
+
+    #[test]
+    fn test_get_conda_prefix() {
+        // given:
+        std::env::set_var("CONDA_PREFIX", "./tests/data");
+        let expected_conda_prefix = String::from("./tests/data");
+        // when:
+        let conda_prefix = get_conda_prefix();
+        // then:
+        assert_eq!(conda_prefix, expected_conda_prefix)
+    }
+
+    #[test]
+    fn test_get_conda_meta_path() {
+        // given:
+        std::env::set_var("CONDA_PREFIX", "./tests/data");
+        let expected_conda_meta_path = String::from("./tests/data/conda-meta");
+        // when:
+        let conda_meta_path = get_conda_meta_path().to_str().unwrap().to_string();
+        // then:
+        assert_eq!(conda_meta_path, expected_conda_meta_path)
+    }
+
+    #[test]
+    fn test_get_conda_metadata() {
+        // given:
+        std::env::set_var("CONDA_PREFIX", "./tests/data");
+        let mut expected_conda_metadata: HashMap<String, Metadata> = HashMap::new();
+        expected_conda_metadata.insert(
+            "pkg1".to_string(),
+            Metadata::new("pkg1".to_string(), "0.0.1".to_string(), vec![]),
+        );
+        expected_conda_metadata.insert(
+            "pkg2a".to_string(),
+            Metadata::new(
+                "pkg2a".to_string(),
+                "0.0.1".to_string(),
+                vec!["pkg1".to_string()],
+            ),
+        );
+        expected_conda_metadata.insert(
+            "pkg2b".to_string(),
+            Metadata::new("pkg2b".to_string(), "0.0.1".to_string(), vec![]),
+        );
+        expected_conda_metadata.insert(
+            "pkg2c".to_string(),
+            Metadata::new(
+                "pkg2c".to_string(),
+                "0.0.1".to_string(),
+                vec!["pkg1".to_string()],
+            ),
+        );
+        expected_conda_metadata.insert(
+            "pkg3".to_string(),
+            Metadata::new(
+                "pkg3".to_string(),
+                "0.0.1".to_string(),
+                vec!["pkg2a".to_string(), "pkg2b".to_string()],
+            ),
+        );
+        // when:
+        let conda_metadata = get_conda_metadata();
+        // then:
+        assert_eq!(conda_metadata, expected_conda_metadata)
+    }
+
+    #[test]
+    fn test_get_dependent_packages_empty() {
+        // given:
+        std::env::set_var("CONDA_PREFIX", "./tests/data");
+        let expected_dependent_packages: Vec<String> = vec![];
+        // when:
+        let dependent_packages = get_dependent_packages("pkg3".to_string());
+        // then:
+        assert_eq!(dependent_packages, expected_dependent_packages)
+    }
+
+    #[test]
+    fn test_get_dependent_packages_one() {
+        // given:
+        std::env::set_var("CONDA_PREFIX", "./tests/data");
+        let expected_dependent_packages: Vec<String> = vec!["pkg3".to_string()];
+        // when:
+        let dependent_packages = get_dependent_packages("pkg2a".to_string());
+        // then:
+        assert_eq!(dependent_packages, expected_dependent_packages)
+    }
+
+    #[test]
+    fn test_get_dependent_packages_multiple() {
+        // given:
+        std::env::set_var("CONDA_PREFIX", "./tests/data");
+        let mut expected_dependent_packages: Vec<String> =
+            vec!["pkg2a".to_string(), "pkg2c".to_string()];
+        expected_dependent_packages.sort();
+        // when:
+        let mut dependent_packages = get_dependent_packages("pkg1".to_string());
+        dependent_packages.sort();
+        // then:
+        assert_eq!(dependent_packages, expected_dependent_packages)
     }
 }
