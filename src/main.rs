@@ -20,13 +20,12 @@ fn main() -> io::Result<()> {
     // for entry in conda_metadata.keys() {
     //     println!("{:?}", conda_metadata.get(entry).unwrap());
     // }
-    println!("{:?}", get_dependent_packages("pkg1".to_string()));
+    println!("{:?}", get_dependent_packages("pkg1"));
 
     println!("----package----");
-    let name = String::from("pkg3");
-    let metadata = Metadata::from_name(name).unwrap();
-    let package = Package::from(metadata);
-    print_package(&package);
+    let name = "pkg3";
+    let p: Package = Metadata::from_name(name).unwrap().into();
+    print_package(&p);
 
     Ok(())
 }
