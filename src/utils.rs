@@ -20,7 +20,7 @@ lazy_static! {
         Regex::new(r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)").unwrap();
 }
 
-fn extract_version(text: String) -> Option<String> {
+fn extract_version<T: AsRef<str>>(text: T) -> Option<String> {
     match VERSION_REGEX.find(text.as_ref()) {
         Some(v) => return Some(v.as_str().to_string()),
         None => return None,
@@ -56,17 +56,17 @@ pub fn get_conda_metadata() -> HashMap<String, Metadata> {
 // TODO this function should take a conda_metadata as an argument
 //  it will be much more flexible
 // TODO this function should take a reference to a name
-pub fn get_dependent_packages(name: String) -> Vec<String> {
+pub fn get_dependent_packages<T: AsRef<str>>(name: T) -> Vec<String> {
     let conda_metadata = get_conda_metadata();
 
-    match conda_metadata.get(&name) {
+    match conda_metadata.get(name.as_ref()) {
         Some(_) => (),
-        None => panic!("Package '{}' not installed", name),
+        None => panic!("Package '{}' not installed", name.as_ref()),
     }
 
     let dependent_packages: Vec<String> = conda_metadata
         .values()
-        .filter(|m| m.requires_dist.contains(&name))
+        .filter(|m| m.requires_dist.contains(&name.as_ref().to_owned()))
         .map(|m| m.name.clone())
         .filter(|n| !n.starts_with("python"))
         .collect();
@@ -80,7 +80,7 @@ pub fn get_leaves() -> Vec<String> {
 
     for (name, m) in conda_metadata.iter() {
         // 0 dependent packages means that the package it the leaf
-        if get_dependent_packages(name.to_string()).len() == 0 {
+        if get_dependent_packages(name).len() == 0 {
             // add name of the package to main dependencies
             leaves.push(name.to_string());
             // and also its dependencies
@@ -115,15 +115,13 @@ mod tests {
 
     #[test]
     fn test_extract_version() {
-        let text = "version 3.7.3".to_string();
-        let output = extract_version(text);
+        let output = extract_version("version 3.7.3");
         assert_eq!(output, Some("3.7.3".to_string()));
     }
 
     #[test]
     fn test_extract_version_empty() {
-        let text = "version".to_string();
-        let output = extract_version(text);
+        let output = extract_version("version");
         assert_eq!(output, None);
     }
 
@@ -155,35 +153,35 @@ mod tests {
         std::env::set_var("CONDA_PREFIX", "./tests/data");
         let mut expected_conda_metadata: HashMap<String, Metadata> = HashMap::new();
         expected_conda_metadata.insert(
-            "pkg1".to_string(),
-            Metadata::new("pkg1".to_string(), "0.0.1".to_string(), vec![]),
+            String::from("pkg1"),
+            Metadata::new(String::from("pkg1"), String::from("0.0.1"), vec![]),
         );
         expected_conda_metadata.insert(
-            "pkg2a".to_string(),
+            String::from("pkg2a"),
             Metadata::new(
-                "pkg2a".to_string(),
-                "0.0.1".to_string(),
-                vec!["pkg1".to_string()],
+                String::from("pkg2a"),
+                String::from("0.0.1"),
+                vec![String::from("pkg1")],
             ),
         );
         expected_conda_metadata.insert(
-            "pkg2b".to_string(),
-            Metadata::new("pkg2b".to_string(), "0.0.1".to_string(), vec![]),
+            String::from("pkg2b"),
+            Metadata::new(String::from("pkg2b"), String::from("0.0.1"), vec![]),
         );
         expected_conda_metadata.insert(
-            "pkg2c".to_string(),
+            String::from("pkg2c"),
             Metadata::new(
-                "pkg2c".to_string(),
-                "0.0.1".to_string(),
-                vec!["pkg2a".to_string()],
+                String::from("pkg2c"),
+                String::from("0.0.1"),
+                vec![String::from("pkg2a")],
             ),
         );
         expected_conda_metadata.insert(
-            "pkg3".to_string(),
+            String::from("pkg3"),
             Metadata::new(
-                "pkg3".to_string(),
-                "0.0.1".to_string(),
-                vec!["pkg2a".to_string(), "pkg2b".to_string()],
+                String::from("pkg3"),
+                String::from("0.0.1"),
+                vec![String::from("pkg2a"), String::from("pkg2b")],
             ),
         );
         // when:
@@ -198,7 +196,7 @@ mod tests {
         std::env::set_var("CONDA_PREFIX", "./tests/data");
         let expected_dependent_packages: Vec<String> = vec![];
         // when:
-        let dependent_packages = get_dependent_packages("pkg3".to_string());
+        let dependent_packages = get_dependent_packages(String::from("pkg3"));
         // then:
         assert_eq!(dependent_packages, expected_dependent_packages)
     }
@@ -207,9 +205,9 @@ mod tests {
     fn test_get_dependent_packages_one() {
         // given:
         std::env::set_var("CONDA_PREFIX", "./tests/data");
-        let expected_dependent_packages: Vec<String> = vec!["pkg3".to_string()];
+        let expected_dependent_packages = vec![String::from("pkg3")];
         // when:
-        let dependent_packages = get_dependent_packages("pkg2b".to_string());
+        let dependent_packages = get_dependent_packages(String::from("pkg2b"));
         // then:
         assert_eq!(dependent_packages, expected_dependent_packages)
     }
@@ -218,11 +216,10 @@ mod tests {
     fn test_get_dependent_packages_multiple() {
         // given:
         std::env::set_var("CONDA_PREFIX", "./tests/data");
-        let mut expected_dependent_packages: Vec<String> =
-            vec!["pkg3".to_string(), "pkg2c".to_string()];
+        let mut expected_dependent_packages = vec![String::from("pkg3"), String::from("pkg2c")];
         expected_dependent_packages.sort();
         // when:
-        let mut dependent_packages = get_dependent_packages("pkg2a".to_string());
+        let mut dependent_packages = get_dependent_packages(String::from("pkg2a"));
         dependent_packages.sort();
         // then:
         assert_eq!(dependent_packages, expected_dependent_packages)
@@ -232,11 +229,11 @@ mod tests {
     fn test_get_leaves() {
         // given:
         std::env::set_var("CONDA_PREFIX", "./tests/data");
-        let mut expected_leaves: Vec<String> = vec![
-            "pkg2a".to_string(),
-            "pkg2b".to_string(),
-            "pkg2c".to_string(),
-            "pkg3".to_string(),
+        let mut expected_leaves = vec![
+            String::from("pkg2a"),
+            String::from("pkg2b"),
+            String::from("pkg2c"),
+            String::from("pkg3"),
         ];
         expected_leaves.sort();
         // when:
