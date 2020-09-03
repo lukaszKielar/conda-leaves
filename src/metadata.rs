@@ -33,7 +33,10 @@ impl Metadata {
     }
 
     // TODO use AsPath as an argument
-    pub fn from_metadata_file(path: &Path) -> Result<Self, io::Error> {
+    pub fn from_metadata_file<'a, P>(path: &'a P) -> Result<Self, io::Error>
+    where
+        P: 'a + ?Sized + AsRef<Path>,
+    {
         let mut name: String = String::new();
         let mut version: String = String::new();
         let mut requires_dist: Vec<String> = vec![];
@@ -62,7 +65,10 @@ impl Metadata {
         Ok(metadata)
     }
 
-    pub fn from_json(path: &Path) -> Result<Self, io::Error> {
+    pub fn from_json<'a, P>(path: &P) -> Result<Self, io::Error>
+    where
+        P: 'a + ?Sized + AsRef<Path>,
+    {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
 
@@ -72,9 +78,9 @@ impl Metadata {
 
     // TODO for now it supports only conda environments where all packages were installed by conda
     //  mixed (pip-conda) environments will be supported soon
-    pub fn from_name(name: String) -> Result<Self, io::Error> {
+    pub fn from_name<T: AsRef<str>>(name: T) -> Result<Self, io::Error> {
         let conda_metadata = get_conda_metadata();
-        match conda_metadata.get(&name) {
+        match conda_metadata.get(name.as_ref()) {
             Some(metadata) => {
                 let m = metadata.clone();
                 return Ok(m);
@@ -82,7 +88,7 @@ impl Metadata {
             None => {
                 return Err(io::Error::new(
                     ErrorKind::Other,
-                    format!("Package '{}' not found", name),
+                    format!("Package '{}' not found", name.as_ref()),
                 ))
             }
         }
@@ -156,13 +162,13 @@ mod tests {
 
     #[test]
     fn test_from_file_metadata_requires_dist_empty() {
-        let path = Path::new("./tests/data/site-packages/numpy-1.19.1.dist-info/METADATA");
+        let path = "./tests/data/site-packages/numpy-1.19.1.dist-info/METADATA";
         let metadata = Metadata::from_metadata_file(path).unwrap();
         assert_eq!(
             metadata,
             Metadata {
-                name: "numpy".to_string(),
-                version: "1.19.1".to_string(),
+                name: String::from("numpy"),
+                version: String::from("1.19.1"),
                 requires_dist: vec![]
             }
         )
@@ -170,18 +176,18 @@ mod tests {
 
     #[test]
     fn test_from_file_metadata_requires_dist_non_empty() {
-        let path = Path::new("./tests/data/site-packages/astroid-2.4.2.dist-info/METADATA");
+        let path = "./tests/data/site-packages/astroid-2.4.2.dist-info/METADATA";
         let metadata = Metadata::from_metadata_file(path).unwrap();
         assert_eq!(
             metadata,
             Metadata {
-                name: "astroid".to_string(),
-                version: "2.4.2".to_string(),
+                name: String::from("astroid"),
+                version: String::from("2.4.2"),
                 requires_dist: vec![
-                    "lazy-object-proxy".to_string(),
-                    "six".to_string(),
-                    "wrapt".to_string(),
-                    "typed-ast".to_string(),
+                    String::from("lazy-object-proxy"),
+                    String::from("six"),
+                    String::from("wrapt"),
+                    String::from("typed-ast"),
                 ]
             }
         )
@@ -189,17 +195,17 @@ mod tests {
 
     #[test]
     fn test_from_file_metadata_requires_dist_non_empty_provides_extra_non_empty() {
-        let path = Path::new("./tests/data/site-packages/mypy-0.782.dist-info/METADATA");
+        let path = "./tests/data/site-packages/mypy-0.782.dist-info/METADATA";
         let metadata = Metadata::from_metadata_file(path).unwrap();
         assert_eq!(
             metadata,
             Metadata {
-                name: "mypy".to_string(),
-                version: "0.782".to_string(),
+                name: String::from("mypy"),
+                version: String::from("0.782"),
                 requires_dist: vec![
-                    "typed-ast".to_string(),
-                    "typing-extensions".to_string(),
-                    "mypy-extensions".to_string(),
+                    String::from("typed-ast"),
+                    String::from("typing-extensions"),
+                    String::from("mypy-extensions"),
                 ]
             }
         )
@@ -207,14 +213,13 @@ mod tests {
 
     #[test]
     fn test_from_file_pkginfo_requires_dist_empty() {
-        let path =
-            Path::new("./tests/data/site-packages/certifi-2020.6.20-py3.8.egg-info/PKG-INFO");
+        let path = "./tests/data/site-packages/certifi-2020.6.20-py3.8.egg-info/PKG-INFO";
         let metadata = Metadata::from_metadata_file(path).unwrap();
         assert_eq!(
             metadata,
             Metadata {
-                name: "certifi".to_string(),
-                version: "2020.6.20".to_string(),
+                name: String::from("certifi"),
+                version: String::from("2020.6.20"),
                 requires_dist: vec![]
             }
         )
@@ -222,15 +227,14 @@ mod tests {
 
     #[test]
     fn test_from_file_pkginfo_requires_dist_non_empty() {
-        let path =
-            Path::new("./tests/data/site-packages/pkg1-1.0.0-just-PKG-INFO.egg-info/PKG-INFO");
+        let path = "./tests/data/site-packages/pkg1-1.0.0-just-PKG-INFO.egg-info/PKG-INFO";
         let metadata = Metadata::from_metadata_file(path).unwrap();
         assert_eq!(
             metadata,
             Metadata {
-                name: "pkg1".to_string(),
-                version: "1.0.0".to_string(),
-                requires_dist: vec!["pkg2".to_string()]
+                name: String::from("pkg1"),
+                version: String::from("1.0.0"),
+                requires_dist: vec![String::from("pkg2")]
             }
         )
     }
@@ -238,8 +242,8 @@ mod tests {
     #[test]
     fn test_from_json_no_dependencies() {
         // given:
-        let path = Path::new("./tests/data/conda-meta/pkg1-0.0.1.json");
-        let expected_m = Metadata::new("pkg1".to_string(), "0.0.1".to_string(), vec![]);
+        let path = "./tests/data/conda-meta/pkg1-0.0.1.json";
+        let expected_m = Metadata::new(String::from("pkg1"), String::from("0.0.1"), vec![]);
         // when:
         let m = Metadata::from_json(path).unwrap();
         // then:
@@ -249,11 +253,11 @@ mod tests {
     #[test]
     fn test_from_json_one_dependency() {
         // given:
-        let path = Path::new("./tests/data/conda-meta/pkg2a-0.0.1.json");
+        let path = "./tests/data/conda-meta/pkg2a-0.0.1.json";
         let expected_m = Metadata::new(
-            "pkg2a".to_string(),
-            "0.0.1".to_string(),
-            vec!["pkg1".to_string()],
+            String::from("pkg2a"),
+            String::from("0.0.1"),
+            vec![String::from("pkg1")],
         );
         // when:
         let m = Metadata::from_json(path).unwrap();
@@ -264,11 +268,11 @@ mod tests {
     #[test]
     fn test_from_json_multiple_dependencies() {
         // given:
-        let path = Path::new("./tests/data/conda-meta/pkg3-0.0.1.json");
+        let path = "./tests/data/conda-meta/pkg3-0.0.1.json";
         let expected_m = Metadata::new(
-            "pkg3".to_string(),
-            "0.0.1".to_string(),
-            vec!["pkg2a".to_string(), "pkg2b".to_string()],
+            String::from("pkg3"),
+            String::from("0.0.1"),
+            vec![String::from("pkg2a"), String::from("pkg2b")],
         );
         // when:
         let m = Metadata::from_json(path).unwrap();
@@ -281,9 +285,9 @@ mod tests {
         // given:
         std::env::set_var("CONDA_PREFIX", "./tests/data");
         let expected_name = String::from("pkg3");
-        let expected_requires_dist = vec!["pkg2a".to_string(), "pkg2b".to_string()];
+        let expected_requires_dist = vec![String::from("pkg2a"), String::from("pkg2b")];
         // when:
-        let m = Metadata::from_name("pkg3".to_string()).unwrap();
+        let m = Metadata::from_name(String::from("pkg3")).unwrap();
         // then:
         assert_eq!(m.name, expected_name);
         assert_eq!(m.requires_dist, expected_requires_dist)
@@ -291,10 +295,10 @@ mod tests {
 
     #[test]
     fn test_from_name_unknown_package() {
-        // given:  
+        // given:
         std::env::set_var("CONDA_PREFIX", "./tests/data");
         // when:
-        let m = Metadata::from_name("unknown".to_string());
+        let m = Metadata::from_name(String::from("unknown"));
         // then:
         assert_eq!(m.is_err(), true)
     }
@@ -308,9 +312,9 @@ mod tests {
             "depends": "pkg2"
         }"#;
         let expected_m = Metadata::new(
-            "pkg1".to_string(),
-            "0.0.1".to_string(),
-            vec!["pkg2".to_string()],
+            String::from("pkg1"),
+            String::from("0.0.1"),
+            vec![String::from("pkg2")],
         );
         // when:
         let m: Metadata = serde_json::from_str(string).unwrap();
@@ -326,7 +330,7 @@ mod tests {
             "version": "0.0.1",
             "depends": "python"
         }"#;
-        let expected_m = Metadata::new("pkg1".to_string(), "0.0.1".to_string(), vec![]);
+        let expected_m = Metadata::new(String::from("pkg1"), String::from("0.0.1"), vec![]);
         // when:
         let m: Metadata = serde_json::from_str(string).unwrap();
         // then:
@@ -341,7 +345,7 @@ mod tests {
             "version": "0.0.1",
             "depends": "libsome"
         }"#;
-        let expected_m = Metadata::new("pkg1".to_string(), "0.0.1".to_string(), vec![]);
+        let expected_m = Metadata::new(String::from("pkg1"), String::from("0.0.1"), vec![]);
         // when:
         let m: Metadata = serde_json::from_str(string).unwrap();
         // then:
@@ -356,7 +360,7 @@ mod tests {
             "version": "0.0.1",
             "depends": "_liblowlevel"
         }"#;
-        let expected_m = Metadata::new("pkg1".to_string(), "0.0.1".to_string(), vec![]);
+        let expected_m = Metadata::new(String::from("pkg1"), String::from("0.0.1"), vec![]);
         // when:
         let m: Metadata = serde_json::from_str(string).unwrap();
         // then:
@@ -372,9 +376,9 @@ mod tests {
             "depends": ["pkg2a", "pkg2b"]
         }"#;
         let expected_m = Metadata::new(
-            "pkg1".to_string(),
-            "0.0.1".to_string(),
-            vec!["pkg2a".to_string(), "pkg2b".to_string()],
+            String::from("pkg1"),
+            String::from("0.0.1"),
+            vec![String::from("pkg2a"), String::from("pkg2b")],
         );
         // when:
         let m: Metadata = serde_json::from_str(string).unwrap();
@@ -391,9 +395,9 @@ mod tests {
             "depends": ["pkg2a", "pkg2b", "python", "libsome", "_liblowlevel"]
         }"#;
         let expected_m = Metadata::new(
-            "pkg1".to_string(),
-            "0.0.1".to_string(),
-            vec!["pkg2a".to_string(), "pkg2b".to_string()],
+            String::from("pkg1"),
+            String::from("0.0.1"),
+            vec![String::from("pkg2a"), String::from("pkg2b")],
         );
         // when:
         let m: Metadata = serde_json::from_str(string).unwrap();
