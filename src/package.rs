@@ -57,7 +57,7 @@ impl From<Metadata> for Package {
         let requires: Vec<Package> = metadata
             .requires_dist
             .iter()
-            .map(|name| Metadata::from_name(name.to_string()).unwrap())
+            .map(|name| Metadata::from_name(name).unwrap())
             .map(|m| Package::from(m))
             .collect();
         // TODO add required by
@@ -117,8 +117,8 @@ mod tests {
     #[test]
     fn test_package_display_with_version() {
         let package = Package::new(
-            "package".to_string(),
-            "1.0.0".to_string(),
+            String::from("package"),
+            String::from("1.0.0"),
             vec![],
             Installer::default(),
         );
@@ -129,8 +129,8 @@ mod tests {
     #[test]
     fn test_package_display_any_version() {
         let package = Package::new(
-            "package".to_string(),
-            "any".to_string(),
+            String::from("package"),
+            String::from("any"),
             vec![],
             Installer::default(),
         );
@@ -140,10 +140,10 @@ mod tests {
 
     #[test]
     fn test_convert_from_pipmetadata_to_package() {
-        let metadata = Metadata::new("some_package".to_string(), "1.0.0".to_string(), vec![]);
+        let metadata = Metadata::new(String::from("some_package"), String::from("1.0.0"), vec![]);
         let expected_package = Package {
-            name: "some_package".to_string(),
-            version: "1.0.0".to_string(),
+            name: String::from("some_package"),
+            version: String::from("1.0.0"),
             requires: vec![],
             installer: Installer::default(),
         };
