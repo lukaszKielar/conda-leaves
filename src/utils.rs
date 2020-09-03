@@ -78,13 +78,11 @@ pub fn get_leaves() -> Vec<String> {
 
     let mut leaves: Vec<String> = vec![];
 
-    for (name, m) in conda_metadata.iter() {
+    for (name, _) in conda_metadata.iter() {
         // 0 dependent packages means that the package it the leaf
         if get_dependent_packages(name).len() == 0 {
             // add name of the package to main dependencies
             leaves.push(name.to_string());
-            // and also its dependencies
-            leaves.extend(m.requires_dist.clone())
         }
     }
     // sort vector
@@ -229,12 +227,7 @@ mod tests {
     fn test_get_leaves() {
         // given:
         std::env::set_var("CONDA_PREFIX", "./tests/data");
-        let mut expected_leaves = vec![
-            String::from("pkg2a"),
-            String::from("pkg2b"),
-            String::from("pkg2c"),
-            String::from("pkg3"),
-        ];
+        let mut expected_leaves = vec![String::from("pkg2c"), String::from("pkg3")];
         expected_leaves.sort();
         // when:
         let leaves = get_leaves();
