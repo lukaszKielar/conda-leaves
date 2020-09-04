@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -40,17 +42,29 @@ pub fn get_conda_meta_path() -> PathBuf {
 pub fn get_conda_metadata() -> HashMap<String, Metadata> {
     let conda_meta = get_conda_meta_path();
 
-    // TODO improvements: I can know the size of HashMap in advance.
-    let mut conda_metadata: HashMap<String, Metadata> = HashMap::new();
+    let mut thread_handles = vec![];
+
+    let conda_metadata: Arc<Mutex<HashMap<String, Metadata>>> =
+        Arc::new(Mutex::new(HashMap::new()));
 
     for entry in conda_meta.read_dir().unwrap() {
-        let path = entry.unwrap().path();
-        if path.is_file() & path.to_str().unwrap().ends_with(".json") {
-            let metadata = Metadata::from_json(&path).unwrap();
-            conda_metadata.insert(metadata.name.clone(), metadata);
-        }
+        let c_conda_metadata = conda_metadata.clone();
+        thread_handles.push(thread::spawn(move || {
+            let path = entry.unwrap().path();
+            if path.is_file() & path.to_str().unwrap().ends_with(".json") {
+                let metadata = Metadata::from_json(&path).unwrap();
+                let mut conda_metadata = c_conda_metadata.lock().unwrap();
+                conda_metadata.insert(metadata.name.clone(), metadata);
+            }
+        }))
     }
-    conda_metadata
+
+    for handle in thread_handles {
+        handle.join().unwrap()
+    }
+
+    let conda_metadata = &*conda_metadata.lock().unwrap();
+    conda_metadata.clone()
 }
 
 // TODO this function should take a conda_metadata as an argument
