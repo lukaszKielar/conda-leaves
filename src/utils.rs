@@ -22,6 +22,10 @@ lazy_static! {
         Regex::new(r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)").unwrap();
 }
 
+lazy_static! {
+    static ref CONDA_METADATA: HashMap<String, Metadata> = get_conda_metadata();
+}
+
 fn extract_version<T: AsRef<str>>(text: T) -> Option<String> {
     match VERSION_REGEX.find(text.as_ref()) {
         Some(v) => return Some(v.as_str().to_string()),
@@ -71,14 +75,12 @@ pub fn get_conda_metadata() -> HashMap<String, Metadata> {
 //  it will be much more flexible
 // TODO this function should take a reference to a name
 pub fn get_dependent_packages<T: AsRef<str>>(name: T) -> Vec<String> {
-    let conda_metadata = get_conda_metadata();
-
-    match conda_metadata.get(name.as_ref()) {
+    match CONDA_METADATA.get(name.as_ref()) {
         Some(_) => (),
         None => panic!("Package '{}' not installed", name.as_ref()),
     }
 
-    let dependent_packages: Vec<String> = conda_metadata
+    let dependent_packages: Vec<String> = CONDA_METADATA
         .values()
         .filter(|m| m.requires_dist.contains(&name.as_ref().to_owned()))
         .map(|m| m.name.clone())
@@ -88,17 +90,17 @@ pub fn get_dependent_packages<T: AsRef<str>>(name: T) -> Vec<String> {
 }
 
 pub fn get_leaves() -> Vec<String> {
-    let conda_metadata = get_conda_metadata();
-
-    let mut leaves: Vec<String> = vec![];
-
-    for (name, _) in conda_metadata.iter() {
-        // 0 dependent packages means that the package it the leaf
-        if get_dependent_packages(name).len() == 0 {
-            // add name of the package to main dependencies
-            leaves.push(name.to_string());
-        }
-    }
+    // filtering
+    // 1. packages that are not dependend on any other packages
+    // skipping
+    // 1. packages that starts with `lib`
+    // 2. packages that starts with `_` (underscore), they are really low level
+    let mut leaves: Vec<String> = CONDA_METADATA
+        .keys()
+        .filter(|name| get_dependent_packages(name).len() == 0)
+        .filter(|name| !(name.starts_with("lib") || name.starts_with("_")))
+        .map(|name| name.to_string())
+        .collect();
     // sort vector
     leaves.sort();
     // remove duplicated values

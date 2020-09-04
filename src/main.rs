@@ -28,7 +28,6 @@ fn main() -> io::Result<()> {
     for leaf in get_leaves().iter() {
         println!("{}", leaf)
     }
-    println!();
 
     Ok(())
 }
