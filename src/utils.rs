@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -18,6 +20,10 @@ pub fn split_and_take_n_elem<T: AsRef<str>>(string: &T, n: usize) -> Option<&str
 lazy_static! {
     static ref VERSION_REGEX: Regex =
         Regex::new(r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)").unwrap();
+}
+
+lazy_static! {
+    static ref CONDA_METADATA: HashMap<String, Metadata> = get_conda_metadata();
 }
 
 fn extract_version<T: AsRef<str>>(text: T) -> Option<String> {
@@ -40,31 +46,41 @@ pub fn get_conda_meta_path() -> PathBuf {
 pub fn get_conda_metadata() -> HashMap<String, Metadata> {
     let conda_meta = get_conda_meta_path();
 
-    // TODO improvements: I can know the size of HashMap in advance.
-    let mut conda_metadata: HashMap<String, Metadata> = HashMap::new();
+    let mut thread_handles = vec![];
+
+    let conda_metadata: Arc<Mutex<HashMap<String, Metadata>>> =
+        Arc::new(Mutex::new(HashMap::new()));
 
     for entry in conda_meta.read_dir().unwrap() {
-        let path = entry.unwrap().path();
-        if path.is_file() & path.to_str().unwrap().ends_with(".json") {
-            let metadata = Metadata::from_json(&path).unwrap();
-            conda_metadata.insert(metadata.name.clone(), metadata);
-        }
+        let c_conda_metadata = conda_metadata.clone();
+        thread_handles.push(thread::spawn(move || {
+            let path = entry.unwrap().path();
+            if path.is_file() & path.to_str().unwrap().ends_with(".json") {
+                let metadata = Metadata::from_json(&path).unwrap();
+                let mut conda_metadata = c_conda_metadata.lock().unwrap();
+                conda_metadata.insert(metadata.name.clone(), metadata);
+            }
+        }))
     }
-    conda_metadata
+
+    for handle in thread_handles {
+        handle.join().unwrap()
+    }
+
+    let conda_metadata = &*conda_metadata.lock().unwrap();
+    conda_metadata.clone()
 }
 
 // TODO this function should take a conda_metadata as an argument
 //  it will be much more flexible
 // TODO this function should take a reference to a name
 pub fn get_dependent_packages<T: AsRef<str>>(name: T) -> Vec<String> {
-    let conda_metadata = get_conda_metadata();
-
-    match conda_metadata.get(name.as_ref()) {
+    match CONDA_METADATA.get(name.as_ref()) {
         Some(_) => (),
         None => panic!("Package '{}' not installed", name.as_ref()),
     }
 
-    let dependent_packages: Vec<String> = conda_metadata
+    let dependent_packages: Vec<String> = CONDA_METADATA
         .values()
         .filter(|m| m.requires_dist.contains(&name.as_ref().to_owned()))
         .map(|m| m.name.clone())
@@ -74,19 +90,17 @@ pub fn get_dependent_packages<T: AsRef<str>>(name: T) -> Vec<String> {
 }
 
 pub fn get_leaves() -> Vec<String> {
-    let conda_metadata = get_conda_metadata();
-
-    let mut leaves: Vec<String> = vec![];
-
-    for (name, m) in conda_metadata.iter() {
-        // 0 dependent packages means that the package it the leaf
-        if get_dependent_packages(name).len() == 0 {
-            // add name of the package to main dependencies
-            leaves.push(name.to_string());
-            // and also its dependencies
-            leaves.extend(m.requires_dist.clone())
-        }
-    }
+    // filtering
+    // 1. packages that are not dependend on any other packages
+    // skipping
+    // 1. packages that starts with `lib`
+    // 2. packages that starts with `_` (underscore), they are really low level
+    let mut leaves: Vec<String> = CONDA_METADATA
+        .keys()
+        .filter(|name| get_dependent_packages(name).len() == 0)
+        .filter(|name| !(name.starts_with("lib") || name.starts_with("_")))
+        .map(|name| name.to_string())
+        .collect();
     // sort vector
     leaves.sort();
     // remove duplicated values
@@ -229,12 +243,7 @@ mod tests {
     fn test_get_leaves() {
         // given:
         std::env::set_var("CONDA_PREFIX", "./tests/data");
-        let mut expected_leaves = vec![
-            String::from("pkg2a"),
-            String::from("pkg2b"),
-            String::from("pkg2c"),
-            String::from("pkg3"),
-        ];
+        let mut expected_leaves = vec![String::from("pkg2c"), String::from("pkg3")];
         expected_leaves.sort();
         // when:
         let leaves = get_leaves();
