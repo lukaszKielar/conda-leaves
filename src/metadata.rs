@@ -7,7 +7,7 @@ use std::path::Path;
 use serde::de;
 use serde::{Deserialize, Deserializer};
 
-use crate::utils::{get_conda_metadata, split_and_take_n_elem};
+use crate::utils::{split_and_take_n_elem, CONDA_METADATA};
 
 // TODO I may want to consider adding `metadata_version` field
 // I assume compatibility with PEP 566 - Metadata v2.1
@@ -79,8 +79,7 @@ impl Metadata {
     // TODO for now it supports only conda environments where all packages were installed by conda
     //  mixed (pip-conda) environments will be supported soon
     pub fn from_name<T: AsRef<str>>(name: T) -> Result<Self, io::Error> {
-        let conda_metadata = get_conda_metadata();
-        match conda_metadata.get(name.as_ref()) {
+        match CONDA_METADATA.get(name.as_ref()) {
             Some(metadata) => {
                 let m = metadata.clone();
                 return Ok(m);

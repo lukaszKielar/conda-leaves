@@ -23,7 +23,7 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref CONDA_METADATA: HashMap<String, Metadata> = get_conda_metadata();
+    pub static ref CONDA_METADATA: HashMap<String, Metadata> = get_conda_metadata();
 }
 
 fn extract_version<T: AsRef<str>>(text: T) -> Option<String> {
