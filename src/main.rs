@@ -1,3 +1,4 @@
+mod env;
 mod metadata;
 mod package;
 mod utils;
@@ -6,6 +7,7 @@ use std::io;
 
 use dotenv::dotenv;
 
+use crate::env::CondaEnv;
 use crate::metadata::Metadata;
 use crate::package::{print_package, Package};
 use crate::utils::get_dependent_packages;
@@ -25,9 +27,14 @@ fn main() -> io::Result<()> {
     println!();
 
     println!("----leaves----");
-    for leaf in get_leaves().iter() {
+    let leaves = get_leaves();
+    for leaf in leaves.iter() {
         println!("{}", leaf)
     }
+
+    println!("----leaves-to-environment.yml----");
+    let env: CondaEnv = leaves.into();
+    env.to_yml()?;
 
     Ok(())
 }

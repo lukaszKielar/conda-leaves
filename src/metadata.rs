@@ -24,14 +24,6 @@ pub struct Metadata {
 }
 
 impl Metadata {
-    pub fn new(name: String, version: String, requires_dist: Vec<String>) -> Self {
-        Self {
-            name,
-            version,
-            requires_dist,
-        }
-    }
-
     // TODO use AsPath as an argument
     pub fn from_metadata_file<'a, P>(path: &'a P) -> Result<Self, io::Error>
     where
@@ -61,7 +53,11 @@ impl Metadata {
             }
         }
 
-        let metadata = Self::new(name, version, requires_dist);
+        let metadata = Self {
+            name,
+            version,
+            requires_dist,
+        };
         Ok(metadata)
     }
 
@@ -242,7 +238,11 @@ mod tests {
     fn test_from_json_no_dependencies() {
         // given:
         let path = "./tests/data/conda-meta/pkg1-0.0.1.json";
-        let expected_m = Metadata::new(String::from("pkg1"), String::from("0.0.1"), vec![]);
+        let expected_m = Metadata {
+            name: String::from("pkg1"),
+            version: String::from("0.0.1"),
+            requires_dist: vec![],
+        };
         // when:
         let m = Metadata::from_json(path).unwrap();
         // then:
@@ -253,11 +253,11 @@ mod tests {
     fn test_from_json_one_dependency() {
         // given:
         let path = "./tests/data/conda-meta/pkg2a-0.0.1.json";
-        let expected_m = Metadata::new(
-            String::from("pkg2a"),
-            String::from("0.0.1"),
-            vec![String::from("pkg1")],
-        );
+        let expected_m = Metadata {
+            name: String::from("pkg2a"),
+            version: String::from("0.0.1"),
+            requires_dist: vec![String::from("pkg1")],
+        };
         // when:
         let m = Metadata::from_json(path).unwrap();
         // then:
@@ -268,11 +268,11 @@ mod tests {
     fn test_from_json_multiple_dependencies() {
         // given:
         let path = "./tests/data/conda-meta/pkg3-0.0.1.json";
-        let expected_m = Metadata::new(
-            String::from("pkg3"),
-            String::from("0.0.1"),
-            vec![String::from("pkg2a"), String::from("pkg2b")],
-        );
+        let expected_m = Metadata {
+            name: String::from("pkg3"),
+            version: String::from("0.0.1"),
+            requires_dist: vec![String::from("pkg2a"), String::from("pkg2b")],
+        };
         // when:
         let m = Metadata::from_json(path).unwrap();
         // then:
@@ -310,11 +310,11 @@ mod tests {
             "version": "0.0.1",
             "depends": "pkg2"
         }"#;
-        let expected_m = Metadata::new(
-            String::from("pkg1"),
-            String::from("0.0.1"),
-            vec![String::from("pkg2")],
-        );
+        let expected_m = Metadata {
+            name: String::from("pkg1"),
+            version: String::from("0.0.1"),
+            requires_dist: vec![String::from("pkg2")],
+        };
         // when:
         let m: Metadata = serde_json::from_str(string).unwrap();
         // then:
@@ -329,7 +329,11 @@ mod tests {
             "version": "0.0.1",
             "depends": "python"
         }"#;
-        let expected_m = Metadata::new(String::from("pkg1"), String::from("0.0.1"), vec![]);
+        let expected_m = Metadata {
+            name: String::from("pkg1"),
+            version: String::from("0.0.1"),
+            requires_dist: vec![],
+        };
         // when:
         let m: Metadata = serde_json::from_str(string).unwrap();
         // then:
@@ -344,7 +348,11 @@ mod tests {
             "version": "0.0.1",
             "depends": "libsome"
         }"#;
-        let expected_m = Metadata::new(String::from("pkg1"), String::from("0.0.1"), vec![]);
+        let expected_m = Metadata {
+            name: String::from("pkg1"),
+            version: String::from("0.0.1"),
+            requires_dist: vec![],
+        };
         // when:
         let m: Metadata = serde_json::from_str(string).unwrap();
         // then:
@@ -359,7 +367,11 @@ mod tests {
             "version": "0.0.1",
             "depends": "_liblowlevel"
         }"#;
-        let expected_m = Metadata::new(String::from("pkg1"), String::from("0.0.1"), vec![]);
+        let expected_m = Metadata {
+            name: String::from("pkg1"),
+            version: String::from("0.0.1"),
+            requires_dist: vec![],
+        };
         // when:
         let m: Metadata = serde_json::from_str(string).unwrap();
         // then:
@@ -374,11 +386,11 @@ mod tests {
             "version": "0.0.1",
             "depends": ["pkg2a", "pkg2b"]
         }"#;
-        let expected_m = Metadata::new(
-            String::from("pkg1"),
-            String::from("0.0.1"),
-            vec![String::from("pkg2a"), String::from("pkg2b")],
-        );
+        let expected_m = Metadata {
+            name: String::from("pkg1"),
+            version: String::from("0.0.1"),
+            requires_dist: vec![String::from("pkg2a"), String::from("pkg2b")],
+        };
         // when:
         let m: Metadata = serde_json::from_str(string).unwrap();
         // then:
@@ -393,11 +405,11 @@ mod tests {
             "version": "0.0.1",
             "depends": ["pkg2a", "pkg2b", "python", "libsome", "_liblowlevel"]
         }"#;
-        let expected_m = Metadata::new(
-            String::from("pkg1"),
-            String::from("0.0.1"),
-            vec![String::from("pkg2a"), String::from("pkg2b")],
-        );
+        let expected_m = Metadata {
+            name: String::from("pkg1"),
+            version: String::from("0.0.1"),
+            requires_dist: vec![String::from("pkg2a"), String::from("pkg2b")],
+        };
         // when:
         let m: Metadata = serde_json::from_str(string).unwrap();
         // then:
