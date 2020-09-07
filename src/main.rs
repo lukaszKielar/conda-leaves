@@ -1,4 +1,4 @@
-mod environment;
+mod env;
 mod metadata;
 mod package;
 mod utils;
@@ -7,7 +7,7 @@ use std::io;
 
 use dotenv::dotenv;
 
-use crate::environment::EnvironmentYml;
+use crate::env::CondaEnv;
 use crate::metadata::Metadata;
 use crate::package::{print_package, Package};
 use crate::utils::get_dependent_packages;
@@ -32,12 +32,12 @@ fn main() -> io::Result<()> {
     }
 
     println!("----to-environment.yml----");
-    let env = EnvironmentYml::new(
+    let env = CondaEnv::new(
         String::from("test"),
         vec![String::from("conda1"), String::from("conda2")],
         Some(vec![String::from("pip1"), String::from("pip2")]),
     );
-    env.to_file()?;
+    env.to_yml()?;
 
     Ok(())
 }

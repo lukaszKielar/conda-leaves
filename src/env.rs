@@ -3,14 +3,17 @@ use std::fs;
 use std::io;
 use std::io::prelude::*;
 
-pub struct EnvironmentYml {
-    // name should be automatically taken from CONDA_DEFAULT_ENV variable
+pub struct CondaEnv {
+    // TODO name should be automatically taken from CONDA_DEFAULT_ENV variable
     name: String,
+    // TODO dependencies should be defined as a Vec<Package>
     dependencies: Vec<String>,
+    // TODO pip should be defined as a Vec<Package>
+    // TODO pip should be deleted, information about installer is available in Package struct
     pip: Option<Vec<String>>,
 }
 
-impl EnvironmentYml {
+impl CondaEnv {
     pub fn new(name: String, dependencies: Vec<String>, pip: Option<Vec<String>>) -> Self {
         Self {
             name,
@@ -18,7 +21,9 @@ impl EnvironmentYml {
             pip,
         }
     }
-    pub fn to_file(&self) -> io::Result<()> {
+
+    // TODO add information about version
+    pub fn to_yml(&self) -> io::Result<()> {
         // create a file in current directory
         // TODO path could be passed as an argument
         let path = env::current_dir()?.join("environment2.yml");
