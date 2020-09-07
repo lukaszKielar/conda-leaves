@@ -27,16 +27,13 @@ fn main() -> io::Result<()> {
     println!();
 
     println!("----leaves----");
-    for leaf in get_leaves().iter() {
+    let leaves = get_leaves();
+    for leaf in leaves.iter() {
         println!("{}", leaf)
     }
 
-    println!("----to-environment.yml----");
-    let env = CondaEnv::new(
-        String::from("test"),
-        vec![String::from("conda1"), String::from("conda2")],
-        Some(vec![String::from("pip1"), String::from("pip2")]),
-    );
+    println!("----leaves-to-environment.yml----");
+    let env: CondaEnv = leaves.into();
     env.to_yml()?;
 
     Ok(())
