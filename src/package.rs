@@ -20,23 +20,7 @@ pub struct Package {
     name: String,
     version: String,
     requires: Vec<Package>,
-    installer: Installer,
-}
-
-impl Package {
-    pub fn new(
-        name: String,
-        version: String,
-        requires: Vec<Package>,
-        installer: Installer,
-    ) -> Self {
-        Package {
-            name,
-            version,
-            requires,
-            installer,
-        }
-    }
+    pub installer: Installer,
 }
 
 impl fmt::Display for Package {
@@ -125,31 +109,35 @@ mod tests {
 
     #[test]
     fn test_package_display_with_version() {
-        let package = Package::new(
-            String::from("package"),
-            String::from("1.0.0"),
-            vec![],
-            Installer::default(),
-        );
+        let package = Package {
+            name: String::from("package"),
+            version: String::from("1.0.0"),
+            requires: vec![],
+            installer: Installer::default(),
+        };
         let package_str = format!("{}", package);
         assert_eq!(package_str, "package (v1.0.0)".to_string())
     }
 
     #[test]
     fn test_package_display_any_version() {
-        let package = Package::new(
-            String::from("package"),
-            String::from("any"),
-            vec![],
-            Installer::default(),
-        );
+        let package = Package {
+            name: String::from("package"),
+            version: String::from("any"),
+            requires: vec![],
+            installer: Installer::default(),
+        };
         let package_str = format!("{}", package);
         assert_eq!(package_str, "package".to_string())
     }
 
     #[test]
     fn test_convert_from_pipmetadata_to_package() {
-        let metadata = Metadata::new(String::from("some_package"), String::from("1.0.0"), vec![]);
+        let metadata = Metadata {
+            name: String::from("some_package"),
+            version: String::from("1.0.0"),
+            requires_dist: vec![],
+        };
         let expected_package = Package {
             name: String::from("some_package"),
             version: String::from("1.0.0"),
@@ -161,24 +149,24 @@ mod tests {
 
     #[test]
     fn test_into_string_conda() {
-        let p: String = Package::new(
-            String::from("conda1"),
-            String::from("0.0.1"),
-            vec![],
-            Installer::Conda,
-        )
+        let p: String = Package {
+            name: String::from("conda1"),
+            version: String::from("0.0.1"),
+            requires: vec![],
+            installer: Installer::Conda,
+        }
         .into();
         assert_eq!(p, String::from("conda1=0.0.1"))
     }
 
     #[test]
     fn test_into_string_pip() {
-        let p: String = Package::new(
-            String::from("pip1"),
-            String::from("0.0.1"),
-            vec![],
-            Installer::Pip,
-        )
+        let p: String = Package {
+            name: String::from("pip1"),
+            version: String::from("0.0.1"),
+            requires: vec![],
+            installer: Installer::Pip,
+        }
         .into();
         assert_eq!(p, String::from("pip1==0.0.1"))
     }

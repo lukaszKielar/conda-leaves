@@ -168,35 +168,43 @@ mod tests {
         let mut expected_conda_metadata: HashMap<String, Metadata> = HashMap::new();
         expected_conda_metadata.insert(
             String::from("pkg1"),
-            Metadata::new(String::from("pkg1"), String::from("0.0.1"), vec![]),
+            Metadata {
+                name: String::from("pkg1"),
+                version: String::from("0.0.1"),
+                requires_dist: vec![],
+            },
         );
         expected_conda_metadata.insert(
             String::from("pkg2a"),
-            Metadata::new(
-                String::from("pkg2a"),
-                String::from("0.0.1"),
-                vec![String::from("pkg1")],
-            ),
+            Metadata {
+                name: String::from("pkg2a"),
+                version: String::from("0.0.1"),
+                requires_dist: vec![String::from("pkg1")],
+            },
         );
         expected_conda_metadata.insert(
             String::from("pkg2b"),
-            Metadata::new(String::from("pkg2b"), String::from("0.0.1"), vec![]),
+            Metadata {
+                name: String::from("pkg2b"),
+                version: String::from("0.0.1"),
+                requires_dist: vec![],
+            },
         );
         expected_conda_metadata.insert(
             String::from("pkg2c"),
-            Metadata::new(
-                String::from("pkg2c"),
-                String::from("0.0.1"),
-                vec![String::from("pkg2a")],
-            ),
+            Metadata {
+                name: String::from("pkg2c"),
+                version: String::from("0.0.1"),
+                requires_dist: vec![String::from("pkg2a")],
+            },
         );
         expected_conda_metadata.insert(
             String::from("pkg3"),
-            Metadata::new(
-                String::from("pkg3"),
-                String::from("0.0.1"),
-                vec![String::from("pkg2a"), String::from("pkg2b")],
-            ),
+            Metadata {
+                name: String::from("pkg3"),
+                version: String::from("0.0.1"),
+                requires_dist: vec![String::from("pkg2a"), String::from("pkg2b")],
+            },
         );
         // when:
         let conda_metadata = get_conda_metadata();
