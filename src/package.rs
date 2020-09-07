@@ -70,6 +70,15 @@ impl From<Metadata> for Package {
     }
 }
 
+impl Into<String> for Package {
+    fn into(self) -> String {
+        match &self.installer {
+            Installer::Pip => return format!("{}=={}", self.name, self.version),
+            Installer::Conda => return format!("{}={}", self.name, self.version),
+        }
+    }
+}
+
 pub fn print_package(package: &Package) {
     let tree = package_to_lines(package).join("\n");
     println!("{}", tree)
@@ -148,5 +157,29 @@ mod tests {
             installer: Installer::default(),
         };
         assert_eq!(Package::from(metadata), expected_package)
+    }
+
+    #[test]
+    fn test_into_string_conda() {
+        let p: String = Package::new(
+            String::from("conda1"),
+            String::from("0.0.1"),
+            vec![],
+            Installer::Conda,
+        )
+        .into();
+        assert_eq!(p, String::from("conda1=0.0.1"))
+    }
+
+    #[test]
+    fn test_into_string_pip() {
+        let p: String = Package::new(
+            String::from("pip1"),
+            String::from("0.0.1"),
+            vec![],
+            Installer::Pip,
+        )
+        .into();
+        assert_eq!(p, String::from("pip1==0.0.1"))
     }
 }
