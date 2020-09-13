@@ -8,7 +8,8 @@ use regex::Regex;
 
 use crate::metadata::Metadata;
 
-pub fn split_and_take_n_elem<T: AsRef<str>>(string: &T, n: usize) -> Option<&str> {
+#[doc(hidden)]
+pub(crate) fn split_and_take_n_elem<T: AsRef<str>>(string: &T, n: usize) -> Option<&str> {
     if string.as_ref().is_empty() {
         return None;
     }
@@ -18,14 +19,18 @@ pub fn split_and_take_n_elem<T: AsRef<str>>(string: &T, n: usize) -> Option<&str
 }
 
 lazy_static! {
+    #[doc(hidden)]
     static ref VERSION_REGEX: Regex =
         Regex::new(r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)").unwrap();
 }
 
 lazy_static! {
-    pub static ref CONDA_METADATA: HashMap<String, Metadata> = get_conda_metadata();
+    #[doc(hidden)]
+    pub(crate) static ref CONDA_METADATA: HashMap<String, Metadata> = get_conda_metadata();
 }
 
+#[doc(hidden)]
+/// Returns optional version (as a String) from given text, when it gets a match again version regex.
 fn extract_version<T: AsRef<str>>(text: T) -> Option<String> {
     match VERSION_REGEX.find(text.as_ref()) {
         Some(v) => return Some(v.as_str().to_string()),
@@ -33,17 +38,34 @@ fn extract_version<T: AsRef<str>>(text: T) -> Option<String> {
     };
 }
 
+#[doc(hidden)]
+/// Returns CONDA_PREFIX evironment variable.
+///
+/// Panics if CONDA_PREFIX is not specified.
 fn get_conda_prefix() -> String {
-    std::env::var("CONDA_PREFIX").expect("CONDA_PREFIX not set. Probably outside of conda env.")
+    match std::env::var("CONDA_PREFIX") {
+        Ok(var) => return var,
+        Err(e) => panic!(e.to_string()),
+    }
 }
 
-pub fn get_conda_meta_path() -> PathBuf {
+/// Returns `conda-meta` path for activated conda environment.
+pub(crate) fn get_conda_meta_path() -> PathBuf {
     let conda_prefix = get_conda_prefix();
     let conda_meta = Path::new(&conda_prefix).join("conda-meta");
     conda_meta
 }
 
-pub fn get_conda_metadata() -> HashMap<String, Metadata> {
+/// Returns the dictionary of all installed Python packages with environment, by reading all available metadata files.
+///
+/// It returns the HashMap, where:
+/// - `key` - is the name of the package.
+/// - `value` - is the Metadata object instance, that contains some additional information about the package.
+///
+/// It's main `conda-leaves` data structure, that contains all the details about currently activated conda environment.
+/// Output of the function is assigned to `CONDA_METADATA` static variable using `lazy_static!`.
+/// It's been designed like that to avoid multiple IO operations, the result is been generated once, and reused.
+pub(crate) fn get_conda_metadata() -> HashMap<String, Metadata> {
     let conda_meta = get_conda_meta_path();
 
     let mut thread_handles = vec![];
@@ -74,6 +96,7 @@ pub fn get_conda_metadata() -> HashMap<String, Metadata> {
 // TODO this function should take a conda_metadata as an argument
 //  it will be much more flexible
 // TODO this function should take a reference to a name
+/// Returns a list of dependencies for given package.
 pub fn get_dependent_packages<T: AsRef<str>>(name: T) -> Vec<String> {
     match CONDA_METADATA.get(name.as_ref()) {
         Some(_) => (),
@@ -89,6 +112,7 @@ pub fn get_dependent_packages<T: AsRef<str>>(name: T) -> Vec<String> {
     dependent_packages
 }
 
+/// Returns a list of packages that are not defined as a dependency for any other package in the environment.
 pub fn get_leaves() -> Vec<String> {
     // filtering
     // 1. packages that are not dependend on any other packages
@@ -148,6 +172,15 @@ mod tests {
         let conda_prefix = get_conda_prefix();
         // then:
         assert_eq!(conda_prefix, expected_conda_prefix)
+    }
+
+    #[test]
+    #[should_panic(expected = "environment variable not found")]
+    fn test_get_conda_prefix_panic() {
+        // given:
+        std::env::remove_var("CONDA_PREFIX");
+        // when:
+        get_conda_prefix();
     }
 
     #[test]

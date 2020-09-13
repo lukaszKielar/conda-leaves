@@ -3,8 +3,9 @@ use std::fmt;
 
 use crate::metadata::Metadata;
 
+/// Enum that represents the installer of given Python package.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Installer {
+pub(crate) enum Installer {
     Pip,
     Conda,
 }
@@ -20,7 +21,7 @@ pub struct Package {
     name: String,
     version: String,
     requires: Vec<Package>,
-    pub installer: Installer,
+    pub(crate) installer: Installer,
 }
 
 impl fmt::Display for Package {
@@ -54,6 +55,9 @@ impl From<Metadata> for Package {
     }
 }
 
+/// Converts Package into String.
+///
+/// It takes into account Installer type, in order to create proper String representation of the Package.
 impl Into<String> for Package {
     fn into(self) -> String {
         match &self.installer {
@@ -63,12 +67,14 @@ impl Into<String> for Package {
     }
 }
 
-pub fn print_package(package: &Package) {
+/// Pretty prints given package.
+pub(crate) fn print_package(package: &Package) {
     let tree = package_to_lines(package).join("\n");
     println!("{}", tree)
 }
 
-pub fn package_to_lines(package: &Package) -> Vec<String> {
+/// Returns a pretty formated String representation of the Package.
+pub(crate) fn package_to_lines(package: &Package) -> Vec<String> {
     let mut lines = vec![format!("{}", package)];
     let children = &package.requires[..];
     if let Some((last_child, non_last_children)) = children.split_last() {
