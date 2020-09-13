@@ -12,6 +12,7 @@ use crate::utils::{split_and_take_n_elem, CONDA_METADATA};
 // TODO I may want to consider adding `metadata_version` field
 // I assume compatibility with PEP 566 - Metadata v2.1
 // https://www.python.org/dev/peps/pep-0566/
+/// Core primitive of the library that represents Python package metadata.
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct Metadata {
     pub name: String,
@@ -24,7 +25,10 @@ pub struct Metadata {
 }
 
 impl Metadata {
-    // TODO use AsPath as an argument
+    /// Returns new instance of Metadata from given Metadata file path.    
+    /// It's able to parse files such as PKG-INFO and METADATA.
+    ///
+    /// If an invalid path is given, then an error is returned.
     pub fn from_metadata_file<'a, P>(path: &'a P) -> Result<Self, io::Error>
     where
         P: 'a + ?Sized + AsRef<Path>,
@@ -61,6 +65,10 @@ impl Metadata {
         Ok(metadata)
     }
 
+    /// Returns new instance of Metadata from given json metadata file path
+    /// (conda keeps json metadata files in `conda-meta` folder within environment).
+    ///
+    /// If an invalid path is given, then an error is returned.
     pub fn from_json<'a, P>(path: &P) -> Result<Self, io::Error>
     where
         P: 'a + ?Sized + AsRef<Path>,
@@ -74,6 +82,10 @@ impl Metadata {
 
     // TODO for now it supports only conda environments where all packages were installed by conda
     //  mixed (pip-conda) environments will be supported soon
+    /// Returns new instance of Metadata from given name.
+    /// It goes through `CONDA_METADATA` and tries to get package from given name.
+    ///
+    /// If an invalid name is given, then an error is returned.
     pub fn from_name<T: AsRef<str>>(name: T) -> Result<Self, io::Error> {
         match CONDA_METADATA.get(name.as_ref()) {
             Some(metadata) => {
@@ -90,6 +102,10 @@ impl Metadata {
     }
 }
 
+#[doc(hidden)]
+/// Function is used for custom serialization of the `required_dist` Metadata attribute.
+/// It's able to skip some low level dependencies during deserialization.
+/// It looks for `depends` section in Metadata files.
 fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
     D: Deserializer<'de>,
