@@ -22,7 +22,7 @@ fn main() -> io::Result<()> {
 
     println!("----package----");
     let name = "pkg3";
-    let p: Package = Metadata::from_name(name).unwrap().into();
+    let p: Package = Metadata::from_name(name)?.into();
     print_package(&p);
     println!();
 
