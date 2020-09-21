@@ -1,3 +1,4 @@
+mod cli;
 mod env;
 mod metadata;
 mod package;
@@ -12,6 +13,16 @@ use crate::metadata::Metadata;
 use crate::package::{print_package, Package};
 use crate::utils::get_dependent_packages;
 use crate::utils::get_leaves;
+
+fn cli_main() {
+    dotenv().ok();
+
+    let matches = cli::build_cli().get_matches();
+
+    match matches.subcommand() {
+        _ => unreachable!("The cli parser should prevent reaching here"),
+    }
+}
 
 fn main() -> io::Result<()> {
     dotenv().ok();
