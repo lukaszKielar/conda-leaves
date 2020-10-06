@@ -15,7 +15,6 @@ use crate::package::{print_package, Package};
 use crate::utils::get_dependent_packages;
 use crate::utils::get_leaves;
 
-// FIXME better to use enum
 #[derive(Debug, StructOpt)]
 #[structopt(name = "conda-leaves")]
 enum Opts {
