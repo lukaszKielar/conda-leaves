@@ -4,6 +4,7 @@ mod package;
 mod utils;
 
 use std::io;
+use std::path::PathBuf;
 
 use dotenv::dotenv;
 use structopt::StructOpt;
@@ -16,62 +17,61 @@ use crate::utils::get_leaves;
 
 // FIXME better to use enum
 #[derive(Debug, StructOpt)]
-struct Cli {
-    #[structopt(short = "p", long, conflicts_with = "leaves")]
-    package: Option<String>,
-
+#[structopt(name = "conda-leaves")]
+enum Opts {
     /// Prints top level packages in conda environment
-    #[structopt(short = "l", long, conflicts_with = "package")]
-    leaves: bool,
+    #[structopt(name = "leaves")]
+    Leaves {
+        /// Prints packages installed by conda only
+        #[structopt(long)]
+        no_pip: bool,
+    },
 
-    /// Prints packages installed by conda
-    #[structopt(long)]
-    no_pip: Option<bool>,
+    /// Prints tree view for the package
+    #[structopt(name = "package")]
+    Package {
+        #[structopt(short = "n", long)]
+        name: String,
+    },
+    /// Exports leaves to the file
+    #[structopt(name = "export")]
+    Export {
+        #[structopt(short = "f", long, default_value = "env.yml", parse(from_os_str))]
+        filename: PathBuf,
+    },
 }
 
 fn main() -> io::Result<()> {
     dotenv().ok();
     env_logger::init();
 
-    let cli: Cli = Cli::from_args();
-    print!("{:?}", cli);
+    let opts: Opts = Opts::from_args();
+    println!("{:?}", opts);
 
-    match cli {
-        Cli { package, .. } => match package {
-            Some(name) => {
-                let p: Package = Metadata::from_name(name)?.into();
-                println!();
-                print_package(&p);
-            }
-            None => (),
-        },
-        // TODO check no_pip value!!
-        Cli { leaves, .. } => {
-            let leaves = get_leaves();
-            for leaf in leaves.iter() {
-                println!("{}", leaf)
-            }
+    match opts {
+        Opts::Package { name } => {
+            let p: Package = Metadata::from_name(name)?.into();
+            println!();
+            print_package(&p);
         }
+        Opts::Leaves { no_pip } => match no_pip {
+            false => {
+                let leaves = get_leaves();
+                println!();
+                for leaf in leaves.iter() {
+                    println!("{}", leaf)
+                }
+            }
+            // FIXME for now we support conda only
+            true => println!("Mixed conda-pip environments are not supported yet."),
+        },
+        Opts::Export { filename } => {
+            let leaves = get_leaves();
+            let env: CondaEnv = leaves.into();
+            env.to_yml(&filename)?
+        }
+        _ => (),
     }
-
-    // println!("{:?}", get_dependent_packages("pkg1"));
-    // println!();
-
-    // println!("----package----");
-    // let name = "pkg3";
-    // let p: Package = Metadata::from_name(name)?.into();
-    // print_package(&p);
-    // println!();
-
-    // println!("----leaves----");
-    // let leaves = get_leaves();
-    // for leaf in leaves.iter() {
-    //     println!("{}", leaf)
-    // }
-
-    // println!("----leaves-to-environment.yml----");
-    // let env: CondaEnv = leaves.into();
-    // env.to_yml()?;
 
     Ok(())
 }
