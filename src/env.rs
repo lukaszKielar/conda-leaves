@@ -3,6 +3,7 @@ use std::env;
 use std::fs;
 use std::io;
 use std::io::prelude::*;
+use std::path::Path;
 
 use crate::metadata::Metadata;
 use crate::package::{Installer, Package};
@@ -15,10 +16,13 @@ pub struct CondaEnv {
 
 impl CondaEnv {
     // TODO add information about version
-    pub fn to_yml(&self) -> io::Result<()> {
+    pub fn to_yml<'a, P>(&self, filename: &'a P) -> io::Result<()>
+    where
+        P: 'a + ?Sized + AsRef<Path>,
+    {
         // create a file in current directory
         // TODO path could be passed as an argument
-        let path = env::current_dir()?.join("environment2.yml");
+        let path = env::current_dir()?.join(filename);
         let mut file = fs::File::create(path)?;
 
         // write name to the file
