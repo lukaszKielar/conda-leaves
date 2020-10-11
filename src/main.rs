@@ -6,13 +6,11 @@ mod utils;
 use std::io;
 use std::path::PathBuf;
 
-use dotenv::dotenv;
 use structopt::StructOpt;
 
 use crate::env::CondaEnv;
 use crate::metadata::Metadata;
 use crate::package::{print_package, Package};
-use crate::utils::get_dependent_packages;
 use crate::utils::get_leaves;
 
 #[derive(Debug, StructOpt)]
@@ -31,28 +29,33 @@ enum Opts {
     },
     /// Exports leaves to the file
     Export {
-        #[structopt(short = "f", long, default_value = "env.yml", parse(from_os_str))]
+        #[structopt(
+            short = "f",
+            long,
+            default_value = "environment.yml",
+            parse(from_os_str)
+        )]
         filename: PathBuf,
     },
 }
 
 fn main() -> io::Result<()> {
-    dotenv().ok();
-    env_logger::init();
-
     let opts: Opts = Opts::from_args();
-    println!("{:?}", opts);
 
     match opts {
-        Opts::Package { name } => {
-            let p: Package = Metadata::from_name(name)?.into();
-            println!();
-            print_package(&p);
-        }
+        Opts::Package { name } => match Metadata::from_name(name) {
+            Ok(m) => {
+                let p: Package = m.into();
+                print_package(&p);
+            }
+            Err(e) => {
+                eprintln!("{}", e);
+                std::process::exit(1)
+            }
+        },
         Opts::Leaves { no_pip } => match no_pip {
             false => {
                 let leaves = get_leaves();
-                println!();
                 for leaf in leaves.iter() {
                     println!("{}", leaf)
                 }
