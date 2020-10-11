@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["lukaszKielar <kielar.lukasz@hotmail.com>"]
 edition = "2018"
 license-file = "LICENSE"
-descrption = "Simple CLI tool that allows to pretty print all dependencies within conda environment"
+description = "Simple CLI tool that allows to pretty print all dependencies within conda environment"
 repository = "https://github.com/lukaszKielar/conda-leaves"
 readme = "README.md"
 
