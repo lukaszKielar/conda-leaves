@@ -19,21 +19,17 @@ use crate::utils::get_leaves;
 #[structopt(name = "conda-leaves")]
 enum Opts {
     /// Prints top level packages in conda environment
-    #[structopt(name = "leaves")]
     Leaves {
         /// Prints packages installed by conda only
         #[structopt(long)]
         no_pip: bool,
     },
-
     /// Prints tree view for the package
-    #[structopt(name = "package")]
     Package {
         #[structopt(short = "n", long)]
         name: String,
     },
     /// Exports leaves to the file
-    #[structopt(name = "export")]
     Export {
         #[structopt(short = "f", long, default_value = "env.yml", parse(from_os_str))]
         filename: PathBuf,
@@ -69,7 +65,6 @@ fn main() -> io::Result<()> {
             let env: CondaEnv = leaves.into();
             env.to_yml(&filename)?
         }
-        _ => (),
     }
 
     Ok(())
