@@ -29,6 +29,7 @@ enum Opts {
     },
     /// Exports leaves to the file
     Export {
+        /// Name of the output yml file
         #[structopt(
             short = "f",
             long,
@@ -50,7 +51,7 @@ fn main() -> io::Result<()> {
             }
             Err(e) => {
                 eprintln!("{}", e);
-                std::process::exit(1)
+                std::process::exit(404)
             }
         },
         Opts::Leaves { no_pip } => match no_pip {
@@ -61,7 +62,10 @@ fn main() -> io::Result<()> {
                 }
             }
             // FIXME for now we support conda only
-            true => println!("Mixed conda-pip environments are not supported yet."),
+            true => {
+                eprintln!("Mixed conda-pip environments are not supported yet.");
+                std::process::exit(1)
+            }
         },
         Opts::Export { filename } => {
             let leaves = get_leaves();
