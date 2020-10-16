@@ -14,7 +14,3 @@ jobs:
         with:
           command: test
           args: --release
-      - name: clippy-check
-        uses: actions-rs/clippy-check@v1.0.7
-        with:
-          args: --all-features
