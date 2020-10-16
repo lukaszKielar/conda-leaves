@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
-use std::thread;
 
 use lazy_static::lazy_static;
+use rayon::prelude::*;
 use regex::Regex;
 
 use crate::metadata::Metadata;
@@ -68,29 +67,24 @@ pub(crate) fn get_conda_meta_path() -> PathBuf {
 pub(crate) fn get_conda_metadata() -> HashMap<String, Metadata> {
     let conda_meta = get_conda_meta_path();
 
-    let mut thread_handles = vec![];
+    // read conda meta directory and get all of the json metadata files
+    let json_metadata_files: Vec<_> = conda_meta
+        .read_dir()
+        .unwrap()
+        .map(|direntry| direntry.unwrap().path())
+        .filter(|path| path.is_file() & path.to_str().unwrap().ends_with(".json"))
+        .collect();
 
-    let conda_metadata: Arc<Mutex<HashMap<String, Metadata>>> =
-        Arc::new(Mutex::new(HashMap::new()));
+    // iterate over json files and create hashmap of all packages installed
+    let conda_metadata: HashMap<String, Metadata> = json_metadata_files
+        .par_iter()
+        .map(|path| {
+            let metadata = Metadata::from_json(&path).unwrap();
+            (metadata.name.clone(), metadata)
+        })
+        .collect();
 
-    for entry in conda_meta.read_dir().unwrap() {
-        let c_conda_metadata = conda_metadata.clone();
-        thread_handles.push(thread::spawn(move || {
-            let path = entry.unwrap().path();
-            if path.is_file() & path.to_str().unwrap().ends_with(".json") {
-                let metadata = Metadata::from_json(&path).unwrap();
-                let mut conda_metadata = c_conda_metadata.lock().unwrap();
-                conda_metadata.insert(metadata.name.clone(), metadata);
-            }
-        }))
-    }
-
-    for handle in thread_handles {
-        handle.join().unwrap()
-    }
-
-    let conda_metadata = &*conda_metadata.lock().unwrap();
-    conda_metadata.clone()
+    conda_metadata
 }
 
 // TODO this function should take a conda_metadata as an argument
