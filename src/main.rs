@@ -13,15 +13,20 @@ use crate::metadata::Metadata;
 use crate::package::{print_package, Package};
 use crate::utils::get_leaves;
 
+/// Simple CLI tool that allows to pretty print all dependencies within conda environment
 #[derive(Debug, StructOpt)]
 #[structopt(name = "conda-leaves")]
-enum Opts {
-    /// Prints top level packages in conda environment
-    Leaves {
-        /// Prints packages installed by conda only
-        #[structopt(long)]
-        no_pip: bool,
-    },
+struct Opts {
+    /// Prints packages installed by conda only
+    #[structopt(long)]
+    no_pip: bool,
+
+    #[structopt(subcommand)]
+    commands: Option<Commands>,
+}
+
+#[derive(Debug, StructOpt)]
+enum Commands {
     /// Prints tree view for the package
     Package {
         #[structopt(short = "n", long)]
@@ -44,33 +49,37 @@ fn main() -> io::Result<()> {
     let opts: Opts = Opts::from_args();
 
     match opts {
-        Opts::Package { name } => match Metadata::from_name(name) {
-            Ok(m) => {
-                let p: Package = m.into();
-                print_package(&p);
-            }
-            Err(e) => {
-                eprintln!("{}", e);
-                std::process::exit(404)
-            }
-        },
-        Opts::Leaves { no_pip } => match no_pip {
-            false => {
+        Opts {
+            no_pip: false,
+            commands,
+        } => match commands {
+            None => {
                 let leaves = get_leaves();
                 for leaf in leaves.iter() {
                     println!("{}", leaf)
                 }
             }
-            // FIXME for now we support conda only
-            true => {
-                eprintln!("Mixed conda-pip environments are not supported yet.");
-                std::process::exit(1)
-            }
+            Some(command) => match command {
+                Commands::Package { name } => match Metadata::from_name(name) {
+                    Ok(m) => {
+                        let p: Package = m.into();
+                        print_package(&p);
+                    }
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        std::process::exit(404)
+                    }
+                },
+                Commands::Export { filename } => {
+                    let leaves = get_leaves();
+                    let env: CondaEnv = leaves.into();
+                    env.to_yml(&filename)?
+                }
+            },
         },
-        Opts::Export { filename } => {
-            let leaves = get_leaves();
-            let env: CondaEnv = leaves.into();
-            env.to_yml(&filename)?
+        Opts { no_pip: true, .. } => {
+            eprintln!("Mixed conda-pip environments are not supported yet.");
+            std::process::exit(1)
         }
     }
 
