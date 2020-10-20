@@ -8,9 +8,19 @@ Simple CLI tool that allows to pretty print all dependencies within conda enviro
 
 Installation is as simple as running `cargo install conda-leaves`.
 
-## Commands
+## CLI
 
-### `help`
+### Commands
+
+Basic usage of CLI is simple call of
+
+```bash
+conda-leaves
+```
+
+It's returning the list of `leaves` - packages that are not dependent on any other package installed in the environment. Those are usually packages we want to include in environment/requirements file, becauce they sit at the bottom of all dependencies. This CLI is about to simplify the process of understanding dependencies in your conda environment, allowing you to manage it with ease.
+
+#### help
 
 Prints help information.
 
@@ -18,23 +28,9 @@ Prints help information.
 conda-leaves help
 ```
 
-### `leaves`
+#### package
 
-Prints top level packages in conda environment.
-
-Flags:
-
-- `--no-pip` - Prints packages installed by conda only
-
-Usage:
-
-```bash
-conda-leaves leaves [Flags]
-```
-
-### `package`
-
-Prints tree view for the package.
+Prints tree view for the package. It helps to understand which libraries are required by the package.
 
 Options:
 
@@ -46,7 +42,17 @@ Usage:
 conda-leaves package --name <name>
 ```
 
-### `export`
+Example:
+
+```bash
+$ conda-leaves package -n jinja2
+jinja2 (v2.11.2)
+├── markupsafe (v1.1.1)
+└── setuptools (v49.6.0)
+    └── certifi (v2020.6.20)
+```
+
+#### export
 
 Exports leaves to the file.
 
