@@ -87,10 +87,10 @@ pub(crate) fn get_conda_metadata() -> HashMap<String, Metadata> {
     conda_metadata
 }
 
-// TODO this function should take a conda_metadata as an argument
-//  it will be much more flexible
-// TODO this function should take a reference to a name
 /// Returns a list of dependencies for given package.
+///
+/// Panics if given package name is not present in the environment.
+// TODO this should return Result<Vec<String>>
 pub fn get_dependent_packages<T: AsRef<str>>(name: T) -> Vec<String> {
     match CONDA_METADATA.get(name.as_ref()) {
         Some(_) => (),
@@ -237,6 +237,15 @@ mod tests {
         let conda_metadata = get_conda_metadata();
         // then:
         assert_eq!(conda_metadata, expected_conda_metadata)
+    }
+
+    #[test]
+    #[should_panic(expected = "Package 'pkg404' not installed")]
+    fn test_get_dependent_packages_invalid_package_panic() {
+        // given:
+        std::env::set_var("CONDA_PREFIX", "./tests/data");
+        // then:
+        get_dependent_packages(String::from("pkg404"));
     }
 
     #[test]

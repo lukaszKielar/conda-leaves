@@ -12,7 +12,7 @@ Installation is as simple as running `cargo install conda-leaves`.
 
 ### Commands
 
-Basic usage of CLI is simple call of
+Basic usage of CLI is as simple as:
 
 ```bash
 conda-leaves
@@ -32,17 +32,21 @@ conda-leaves help
 
 Prints tree view for the package. It helps to understand which libraries are required by the package.
 
+Flags:
+
+- `-d`, `--dependent-packages` - Prints libraries that depend on a given package.
+
 Options:
 
-- `-n`, `-name` - Name of the package that should be printed.
+- `-n`, `--name` - Name of the package that should be printed.
 
 Usage:
 
 ```bash
-conda-leaves package --name <name>
+conda-leaves package [Flags] --name <name>
 ```
 
-Example:
+Examples:
 
 ```bash
 $ conda-leaves package -n jinja2
@@ -50,6 +54,14 @@ jinja2 (v2.11.2)
 ├── markupsafe (v1.1.1)
 └── setuptools (v49.6.0)
     └── certifi (v2020.6.20)
+```
+
+```bash
+$ conda-leaves package -n dask -d
+Following packages depend on dask:
+- dask-ml
+- dask-xgboost
+- dask-glm
 ```
 
 #### export
