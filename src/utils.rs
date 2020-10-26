@@ -87,14 +87,11 @@ pub(crate) fn get_conda_metadata() -> HashMap<String, Metadata> {
     conda_metadata
 }
 
-// TODO this function should take a conda_metadata as an argument
-//  it will be much more flexible
-// TODO this function should take a reference to a name
 /// Returns a list of dependencies for given package.
-pub fn get_dependent_packages<T: AsRef<str>>(name: T) -> Vec<String> {
+pub fn get_dependent_packages<T: AsRef<str>>(name: T) -> Option<Vec<String>> {
     match CONDA_METADATA.get(name.as_ref()) {
         Some(_) => (),
-        None => panic!("Package '{}' not installed", name.as_ref()),
+        None => return None,
     }
 
     let dependent_packages: Vec<String> = CONDA_METADATA
@@ -103,7 +100,7 @@ pub fn get_dependent_packages<T: AsRef<str>>(name: T) -> Vec<String> {
         .map(|m| m.name.clone())
         .filter(|n| !n.starts_with("python"))
         .collect();
-    dependent_packages
+    Some(dependent_packages)
 }
 
 /// Returns a list of packages that are not defined as a dependency for any other package in the environment.
@@ -113,9 +110,10 @@ pub fn get_leaves() -> Vec<String> {
     // skipping
     // 1. packages that starts with `lib`
     // 2. packages that starts with `_` (underscore), they are really low level
+    // I can simply unwrap `get_dependent_packages` because I loop through CONDA_METADATA
     let mut leaves: Vec<String> = CONDA_METADATA
         .keys()
-        .filter(|name| get_dependent_packages(name).len() == 0)
+        .filter(|name| get_dependent_packages(name).unwrap().len() == 0)
         .filter(|name| !(name.starts_with("lib") || name.starts_with("_")))
         .map(|name| name.to_string())
         .collect();
@@ -240,10 +238,20 @@ mod tests {
     }
 
     #[test]
+    fn test_get_dependent_packages_invalid_package() {
+        // given:
+        std::env::set_var("CONDA_PREFIX", "./tests/data");
+        // when:
+        let dependent_packages = get_dependent_packages(String::from("pkg404"));
+        // then:
+        assert_eq!(dependent_packages, None)
+    }
+
+    #[test]
     fn test_get_dependent_packages_empty() {
         // given:
         std::env::set_var("CONDA_PREFIX", "./tests/data");
-        let expected_dependent_packages: Vec<String> = vec![];
+        let expected_dependent_packages: Option<Vec<String>> = Some(vec![]);
         // when:
         let dependent_packages = get_dependent_packages(String::from("pkg3"));
         // then:
@@ -254,7 +262,7 @@ mod tests {
     fn test_get_dependent_packages_one() {
         // given:
         std::env::set_var("CONDA_PREFIX", "./tests/data");
-        let expected_dependent_packages = vec![String::from("pkg3")];
+        let expected_dependent_packages = Some(vec![String::from("pkg3")]);
         // when:
         let dependent_packages = get_dependent_packages(String::from("pkg2b"));
         // then:
@@ -268,7 +276,7 @@ mod tests {
         let mut expected_dependent_packages = vec![String::from("pkg3"), String::from("pkg2c")];
         expected_dependent_packages.sort();
         // when:
-        let mut dependent_packages = get_dependent_packages(String::from("pkg2a"));
+        let mut dependent_packages = get_dependent_packages(String::from("pkg2a")).unwrap();
         dependent_packages.sort();
         // then:
         assert_eq!(dependent_packages, expected_dependent_packages)
