@@ -1,6 +1,6 @@
 [package]
 name = "conda-leaves"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["lukaszKielar <kielar.lukasz@hotmail.com>"]
 edition = "2018"
 license-file = "LICENSE"
@@ -10,7 +10,7 @@ readme = "README.md"
 
 [dependencies]
 colored = "2"
-env_logger = "0.7.1"
+env_logger = "0.8.1"
 glob = "0.3.0"
 lazy_static = "1.4.0"
 log = "0.4"
