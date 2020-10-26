@@ -70,14 +70,21 @@ fn main() -> io::Result<()> {
                     dependent_packages,
                 } => match dependent_packages {
                     true => {
-                        let dep_packages = get_dependent_packages(&name);
-                        if dep_packages.len() == 0 {
-                            println!("{} is not required by any package in the environment", name)
+                        if let Some(dep_packages) = get_dependent_packages(&name) {
+                            if dep_packages.len() == 0 {
+                                println!(
+                                    "{} is not required by any package in the environment",
+                                    name
+                                )
+                            } else {
+                                println!("Following packages depend on {}:", name,)
+                            }
+                            for package in dep_packages {
+                                println!("- {}", package)
+                            }
                         } else {
-                            println!("Following packages depend on {}:", name,)
-                        }
-                        for package in dep_packages {
-                            println!("- {}", package)
+                            eprintln!("Package '{}' not found", name);
+                            std::process::exit(404)
                         }
                     }
                     false => match Metadata::from_name(name) {
