@@ -88,8 +88,6 @@ pub(crate) fn get_conda_metadata() -> HashMap<String, Metadata> {
 }
 
 /// Returns a list of dependencies for given package.
-///
-/// Panics if given package name is not present in the environment.
 pub fn get_dependent_packages<T: AsRef<str>>(name: T) -> Option<Vec<String>> {
     match CONDA_METADATA.get(name.as_ref()) {
         Some(_) => (),
