@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use lazy_static::lazy_static;
 use rayon::prelude::*;
@@ -123,6 +124,58 @@ pub fn get_leaves() -> Vec<String> {
     leaves.dedup();
     // and return them
     leaves
+}
+
+/// Returns a Hashmap as a result of conversion from `conda info` stdout.
+// Function was defined for testing purposes. See explanation for `get_conda_info` function.
+pub(crate) fn get_hashmap_from_conda_info_stdout(stdout: String) -> HashMap<String, Vec<String>> {
+    // init empty vars
+    let mut conda_info: HashMap<String, Vec<String>> = HashMap::new();
+    let mut old_key: String = String::new();
+
+    let lines = stdout.lines().map(|x| x.trim());
+
+    for line in lines {
+        let content = line.split(" : ").collect::<Vec<_>>();
+
+        let (k, v) = if content.len() == 2 {
+            let k = content[0].to_string();
+            let v = content[1].to_string();
+            old_key = k;
+            (k, v)
+        } else if content.len() == 1 {
+            let v = content[0].to_string();
+            let k = old_key;
+            (k, v)
+        } else {
+            panic!("Cannot parse")
+        };
+
+        conda_info.insert(k, vec![v]);
+        // if conda_info.contains_key(&k) {
+        //     // it should always be available
+        //     let old_v = &*conda_info.get(&k).unwrap();
+        //     let new_v = old_v.clone().push(v)
+        // }
+    }
+
+    conda_info
+}
+
+/// Returns a Hashmap with information about taken from stdout of `conda info` command.
+// I'm creating this method as a kind of wrapper around function defined above.
+// At least I'll be able to test function above, otherwise testing this one will be really difficult to mock
+// (cannot mock entire conda metadata that is returned by `conda info`).
+pub(crate) fn get_conda_info() -> HashMap<String, Vec<String>> {
+    let conda_info_stdout = Command::new("conda")
+        .arg("info")
+        .output()
+        .expect("Cannot run `conda info`. Please whether `conda` is available in PATH.")
+        .stdout;
+    // shadow previous value
+    // we can `unwrap` because we rely on `conda info` command
+    let conda_info_stdout = String::from_utf8(conda_info_stdout).unwrap();
+    get_hashmap_from_conda_info_stdout(conda_info_stdout)
 }
 
 #[cfg(test)]
@@ -292,5 +345,95 @@ mod tests {
         let leaves = get_leaves();
         // then:
         assert_eq!(leaves, expected_leaves)
+    }
+
+    #[test]
+    fn test_get_hashmap_from_conda_info_stdout() {
+        // given:
+        let input_stdout = r#"
+        
+     active environment : base
+     active env location : /tmp/miniconda3
+             shell level : 1
+        user config file : /tmp/.condarc
+  populated config files : /tmp/.condarc
+           conda version : 4.9.0
+     conda-build version : not installed
+          python version : 3.8.3.final.0
+        virtual packages : __cuda=11.1=0
+                           __glibc=2.31=0
+                           __unix=0=0
+                           __archspec=1=x86_64
+        base environment : /tmp/miniconda3  (writable)
+            channel URLs : https://conda.anaconda.org/conda-forge/linux-64
+                           https://conda.anaconda.org/conda-forge/noarch
+                           https://conda.anaconda.org/anaconda/linux-64
+                           https://conda.anaconda.org/anaconda/noarch
+                           https://repo.anaconda.com/pkgs/main/linux-64
+                           https://repo.anaconda.com/pkgs/main/noarch
+                           https://repo.anaconda.com/pkgs/r/linux-64
+                           https://repo.anaconda.com/pkgs/r/noarch
+           package cache : /tmp/miniconda3/pkgs
+                           /tmp/.conda/pkgs
+        envs directories : /tmp/miniconda3/envs
+                           /tmp/.conda/envs
+                platform : linux-64
+        
+        "#
+        .to_string();
+        let expected_hashmap: HashMap<String, Vec<String>> = vec![
+            ("active environment", vec!["base"]),
+            ("active env location", vec!["/tmp/miniconda3"]),
+            ("shell level", vec!["1"]),
+            ("user config file", vec!["/tmp/.condarc"]),
+            ("populated config files", vec!["/tmp/.condarc"]),
+            ("conda version", vec!["4.9.0"]),
+            ("conda-build version", vec!["not installed"]),
+            ("python version", vec!["3.8.3.final.0"]),
+            (
+                "virtual packages",
+                vec![
+                    "__cuda=11.1=0",
+                    "__glibc=2.31=0",
+                    "__unix=0=0",
+                    "__archspec=1=x86_64",
+                ],
+            ),
+            ("base environment", vec!["/tmp/miniconda3  (writable)"]),
+            (
+                "channel URLs",
+                vec![
+                    "https://conda.anaconda.org/conda-forge/linux-64",
+                    "https://conda.anaconda.org/conda-forge/noarch",
+                    "https://conda.anaconda.org/anaconda/linux-64",
+                    "https://conda.anaconda.org/anaconda/noarch",
+                    "https://repo.anaconda.com/pkgs/main/linux-64",
+                    "https://repo.anaconda.com/pkgs/main/noarch",
+                    "https://repo.anaconda.com/pkgs/r/linux-64",
+                    "https://repo.anaconda.com/pkgs/r/noarch",
+                ],
+            ),
+            (
+                "package cache",
+                vec!["/tmp/miniconda3/pkgs", "/tmp/.conda/pkgs"],
+            ),
+            (
+                "envs directories",
+                vec!["/tmp/miniconda3/envs", "/tmp/.conda/envs"],
+            ),
+            ("platform", vec!["linux-64"]),
+        ]
+        .iter()
+        .map(|tuple| {
+            (
+                tuple.0.to_string(),
+                tuple.1.iter().map(|i| i.to_string()).collect(),
+            )
+        })
+        .collect();
+        // when:
+        let output_hashmap = get_hashmap_from_conda_info_stdout(input_stdout);
+        // then:
+        assert_eq!(output_hashmap, expected_hashmap)
     }
 }
