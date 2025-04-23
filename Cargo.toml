@@ -1,7 +1,7 @@
 [package]
 name = "conda-leaves"
 version = "0.3.0"
-authors = ["lukaszKielar <kielar.lukasz@hotmail.com>"]
+authors = ["Lukasz Kielar <31779738+lukaszKielar@users.noreply.github.com>"]
 edition = "2018"
 license-file = "LICENSE"
 description = "Simple CLI tool that allows to pretty print all dependencies within conda environment"
